@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Impostor — Clash Royale Cards (4 players)</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+            background: #0b1220;
+            color: #eaf0ff
+        }
+
+        .wrap {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 18px
+        }
+
+        h1 {
+            font-size: 20px;
+            margin: 6px 0 12px
+        }
+
+        .card {
+            background: #121b2e;
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 16px;
+            padding: 16px
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 8px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .10);
+            margin: 6px 8px 0 0;
+            font-size: 13px;
+            color: #cfe0ff
+        }
+
+        .muted {
+            color: #9fb0d0;
+            font-size: 13px
+        }
+
+        .big {
+            margin-top: 14px;
+            padding: 18px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .05);
+            border: 1px solid rgba(255, 255, 255, .12);
+            text-align: center;
+            min-height: 260px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 10px
+        }
+
+        .identity {
+            font-size: 34px;
+            font-weight: 900;
+            letter-spacing: .2px
+        }
+
+        .impostor {
+            color: #ff6b6b
+        }
+
+        .btns {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+            justify-content: center
+        }
+
+        button {
+            cursor: pointer;
+            border: 0;
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-weight: 800
+        }
+
+        .primary {
+            background: #7aa7ff;
+            color: #071021
+        }
+
+        .ghost {
+            background: transparent;
+            color: #eaf0ff;
+            border: 1px solid rgba(255, 255, 255, .18)
+        }
+
+        .danger {
+            background: rgba(255, 107, 107, .18);
+            color: #eaf0ff;
+            border: 1px solid rgba(255, 107, 107, .28)
+        }
+
+        button:disabled {
+            opacity: .5;
+            cursor: not-allowed
+        }
+
+        .kv {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .kv span {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, .05);
+            border: 1px solid rgba(255, 255, 255, .10);
+            font-size: 13px;
+            color: #d7e6ff
+        }
+
+        img#cardImg {
+            width: min(280px, 80vw);
+            height: auto;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: rgba(255, 255, 255, .04);
+            margin: 6px auto 0;
+            display: none;
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, .10);
+            margin: 14px 0
+        }
+
+        code {
+            background: rgba(255, 255, 255, .06);
+            padding: 2px 6px;
+            border-radius: 8px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h1>Impostor — Clash Royale Cards (4 Players)</h1>
+
+        <div class="card">
+            <div class="pill">Starting player: <b id="starter">?</b></div>
+            <div class="pill">Current player: <b id="currentPlayer">1</b></div>
+            <div class="pill">Cards loaded: <b id="count">…</b></div>
+
+            <div class="big" id="displayBox">
+                <div class="muted" id="statusText">Loading cards…</div>
+                <div class="identity" id="identityText">—</div>
+
+                <img id="cardImg" alt="Card image" />
+
+                <div class="kv" id="cardMeta" style="display:none;">
+                    <span id="metaType"></span>
+                    <span id="metaRarity"></span>
+                    <span id="metaElixir"></span>
+                    <span id="metaArena"></span>
+                </div>
+
+                <div class="muted" id="cardDesc" style="display:none;max-width:680px;margin:0 auto;"></div>
+                <div class="muted" id="imgHint" style="display:none;max-width:680px;margin:0 auto;">
+                    (If the image doesn’t load, the wiki filename might not match perfectly — the game still works.)
+                </div>
+            </div>
+
+            <div class="btns">
+                <button class="primary" id="revealBtn" type="button" disabled>Reveal identity</button>
+                <button class="ghost" id="nextBtn" type="button" disabled>Next player</button>
+                <button class="danger" id="resetBtn" type="button" style="display:none;">Reset</button>
+            </div>
+
+            <div class="divider"></div>
+            <div class="muted">
+                Cards come from <code>RoyaleAPI cards.json</code>. Images are loaded from the Clash Royale Wiki (Fandom)
+                using
+                <code>Special:FilePath</code>.
+                [oai_citation:1‡royaleapi.github.io](https://royaleapi.github.io/cr-api-data/json/cards.json)
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Current cards list (kept updated by RoyaleAPI)
+        const CARDS_URL = "https://royaleapi.github.io/cr-api-data/json/cards.json";
+
+        // Card images (Fandom file redirect)
+        const WIKI_FILEPATH = "https://clashroyale.fandom.com/wiki/Special:FilePath/";
+
+        // State
+        let cards = [];
+        let secretCard = null;  // chosen card object
+        let impostor = 1;       // 1..4
+        let starter = 1;        // 1..4
+        let current = 1;        // 1..4
+
+        const $ = (id) => document.getElementById(id);
+        const rand1to4 = () => Math.floor(Math.random() * 4) + 1;
+
+        function hideCardUI() {
+            $("identityText").textContent = "Hidden";
+            $("identityText").classList.remove("impostor");
+            $("cardMeta").style.display = "none";
+            $("cardDesc").style.display = "none";
+            $("cardDesc").textContent = "";
+            $("imgHint").style.display = "none";
+
+            const img = $("cardImg");
+            img.style.display = "none";
+            img.removeAttribute("src");
+        }
+
+        // Try to guess the wiki filename for a card
+        function wikiFilenameForCardName(name) {
+            // normalize some annoying punctuation / special cases
+            const special = {
+                "P.E.K.K.A": "PEKKACard.png",
+                "Mini P.E.K.K.A": "MiniPEKKACard.png",
+                "The Log": "TheLogCard.png",
+                "X-Bow": "XBowCard.png",
+                "Electro Wizard": "ElectroWizardCard.png",
+                "Goblin Drill": "GoblinDrillCard.png",
+                "Mother Witch": "MotherWitchCard.png",
+                "Royal Delivery": "RoyalDeliveryCard.png",
+                "Elixir Golem": "ElixirGolemCard.png",
+                "Battle Healer": "BattleHealerCard.png",
+                "Mega Minion": "MegaMinionCard.png",
+                "Three Musketeers": "ThreeMusketeersCard.png",
+            };
+            if (special[name]) return special[name];
+
+            // Remove anything that's not letter/number/space, then PascalCase, then "Card.png"
+            const cleaned = name
+                .replace(/’/g, "'")
+                .replace(/[^A-Za-z0-9 ]+/g, " ")
+                .replace(/\s+/g, " ")
+                .trim();
+
+            const parts = cleaned.split(" ").filter(Boolean);
+            const pascal = parts.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join("");
+            return pascal + "Card.png";
+        }
+
+        function setCardImage(cardName) {
+            const img = $("cardImg");
+            const filename = wikiFilenameForCardName(cardName);
+            const url = WIKI_FILEPATH + encodeURIComponent(filename);
+
+            img.onerror = () => {
+                img.style.display = "none";
+                $("imgHint").style.display = "block";
+            };
+
+            img.onload = () => {
+                $("imgHint").style.display = "none";
+                img.style.display = "block";
+            };
+
+            img.src = url;
+        }
+
+        function showNormalCard(card) {
+            $("identityText").textContent = card.name;
+            $("identityText").classList.remove("impostor");
+
+            // image
+            setCardImage(card.name);
+
+            // meta
+            $("metaType").textContent = `Type: ${card.type ?? "?"}`;
+            $("metaRarity").textContent = `Rarity: ${card.rarity ?? "?"}`;
+            $("metaElixir").textContent = `Elixir: ${card.elixir ?? "?"}`;
+            $("metaArena").textContent = `Arena: ${card.arena ?? "?"}`;
+            $("cardMeta").style.display = "flex";
+
+            // description
+            if (card.description) {
+                $("cardDesc").textContent = card.description;
+                $("cardDesc").style.display = "block";
+            }
+        }
+
+        function showImpostor() {
+            $("identityText").textContent = "IMPOSTOR";
+            $("identityText").classList.add("impostor");
+            $("cardMeta").style.display = "none";
+            $("cardDesc").style.display = "none";
+            $("imgHint").style.display = "none";
+            $("cardImg").style.display = "none";
+            $("cardImg").removeAttribute("src");
+        }
+
+        function newRound() {
+            if (!cards.length) return;
+
+            impostor = rand1to4();
+            starter = rand1to4();
+            current = 1;
+
+            secretCard = cards[Math.floor(Math.random() * cards.length)];
+
+            $("starter").textContent = starter;
+            $("currentPlayer").textContent = current;
+            $("statusText").textContent = `Player ${current}: press Reveal (make sure no one is looking)`;
+            hideCardUI();
+
+            $("revealBtn").disabled = false;
+            $("nextBtn").disabled = true;
+            $("nextBtn").style.display = "inline-block";
+            $("resetBtn").style.display = "none";
+        }
+
+        function reveal() {
+            if (!secretCard) return;
+
+            if (current === impostor) showImpostor();
+            else showNormalCard(secretCard);
+
+            $("statusText").textContent =
+                `Player ${current}: remember it, then press ${current === 4 ? "Reset" : "Next player"}`;
+
+            $("revealBtn").disabled = true;
+            $("nextBtn").disabled = false;
+
+            if (current === 4) {
+                $("nextBtn").style.display = "none";
+                $("resetBtn").style.display = "inline-block";
+            }
+        }
+
+        function nextPlayer() {
+            current++;
+            if (current > 4) return newRound();
+
+            $("currentPlayer").textContent = current;
+            $("statusText").textContent = `Player ${current}: press Reveal (make sure no one is looking)`;
+            hideCardUI();
+
+            $("revealBtn").disabled = false;
+            $("nextBtn").disabled = true;
+        }
+
+        async function loadCards() {
+            $("statusText").textContent = "Loading cards…";
+            hideCardUI();
+
+            try {
+                const res = await fetch(CARDS_URL, { cache: "no-store" });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                cards = Array.isArray(data) ? data : [];
+                $("count").textContent = String(cards.length);
+
+                // Require clicking Reset to start (so you can hand the phone over safely)
+                $("statusText").textContent = "Ready. Press Reset to start a round.";
+                $("resetBtn").style.display = "inline-block";
+                $("nextBtn").style.display = "none";
+                $("revealBtn").disabled = true;
+            } catch (e) {
+                $("statusText").textContent = "Couldn’t load cards (are you offline?).";
+                $("identityText").textContent = "Reload the page";
+                $("count").textContent = "0";
+                $("revealBtn").disabled = true;
+                $("nextBtn").disabled = true;
+            }
+        }
+
+        $("revealBtn").addEventListener("click", reveal);
+        $("nextBtn").addEventListener("click", nextPlayer);
+        $("resetBtn").addEventListener("click", () => {
+            $("revealBtn").disabled = false;
+            $("nextBtn").style.display = "inline-block";
+            newRound();
+        });
+
+        loadCards();
+    </script>
+</body>
+
+</html>
