@@ -137,7 +137,8 @@
 
 <script>
 const CARDS_URL = "https://royaleapi.github.io/cr-api-data/json/cards.json";
-const IMG_BASE = "https://clashroyale.fandom.com/wiki/Special:FilePath/";
+const IMG_BASE = "https://www.deckshop.pro/img/card/full/";
+
 
 let cards = [];
 let secret;
@@ -148,9 +149,10 @@ let current = 1;
 const $ = id => document.getElementById(id);
 const rand4 = () => Math.floor(Math.random() * 4) + 1;
 
-function wikiName(name) {
-  return name.replace(/[^A-Za-z0-9]/g, "") + "Card.png";
+function imageName(name) {
+  return name.replace(/[^A-Za-z0-9]/g, "") + ".png";
 }
+
 
 function hide() {
   $("identity").textContent = "Hidden";
@@ -182,7 +184,7 @@ function reveal() {
     $("identity").classList.add("impostor");
   } else {
     $("identity").textContent = secret.name;
-    $("cardImg").src = IMG_BASE + encodeURIComponent(wikiName(secret.name));
+    $("cardImg").src = IMG_BASE + imageName(secret.name);
     $("cardImg").style.display = "block";
 
     $("type").textContent = secret.type;
